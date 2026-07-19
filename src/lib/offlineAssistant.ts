@@ -97,3 +97,63 @@ export function generateOfflineReply(
 
   return "All monitored systems look nominal right now. Ask me about gates, crowd density, weather, incidents, staffing, or concessions for a live operational read-out.";
 }
+
+export function detectOfflineCommand(question: string) {
+  const q = question.toLowerCase();
+
+  // 1. Toggle Gate
+  if (q.includes("close gate") || q.includes("open gate") || q.includes("toggle gate") || q.includes("shut gate")) {
+    const match = q.match(/gate\s+(\d+|[a-z]+)/);
+    const targetStatus = (q.includes("close") || q.includes("shut")) ? "closed" : q.includes("open") ? "open" : undefined;
+    const gateId = match ? `gate-${match[1]}` : null;
+    return {
+      name: "toggleGate",
+      args: {
+        gate: gateId,
+        ...(targetStatus && { status: targetStatus }),
+      },
+      rationale: `Understood. Modifying status for ${gateId || "the specified gate"} to manage crowd flow. I have prepared the command for your approval.`,
+    };
+  }
+
+  // 2. Dispatch Medical
+  if (q.includes("dispatch medical") || q.includes("send medical") || q.includes("medic") || q.includes("emergency")) {
+    const match = q.match(/(?:to|in|at)\s+([a-z0-9\s]+)/);
+    const loc = match ? match[1].trim() : "the specified zone";
+    return {
+      name: "dispatchMedical",
+      args: {
+        location: loc,
+      },
+      rationale: `Medical emergency acknowledged at ${loc}. Immediate dispatch of medical personnel is required. I have staged the dispatch command for your approval.`,
+    };
+  }
+
+  // 3. Resolve Incident
+  if (q.includes("resolve incident") || q.includes("close incident") || q.includes("mark incident")) {
+    const match = q.match(/incident\s+([a-z0-9-]+)/);
+    const id = match ? match[1] : null;
+    return {
+      name: "resolveIncident",
+      args: {
+        incidentId: id,
+      },
+      rationale: `Logging incident ${id || ""} as resolved to clear it from the active operations board. Please confirm this action.`,
+    };
+  }
+
+  // 4. Broadcast Announcement
+  if (q.includes("broadcast") || q.includes("announce") || q.includes("make an announcement")) {
+    const match = q.match(/(?:broadcast|announce)(?: that|:)?\s+(.+)/);
+    const msg = match ? match[1].trim() : "Attention all fans, please remain calm.";
+    return {
+      name: "broadcastAnnouncement",
+      args: {
+        message: msg,
+      },
+      rationale: `Preparing to route the following public address announcement to the stadium: "${msg}". Awaiting your final approval to broadcast.`,
+    };
+  }
+
+  return null;
+}

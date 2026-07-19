@@ -160,16 +160,28 @@ export function resolveIncident(state: StadiumState, id: string): StadiumState {
   };
 }
 
-export function toggleGate(state: StadiumState, id: string): StadiumState {
+export function toggleGate(state: StadiumState, id: string, targetStatus?: string): StadiumState {
   return {
     ...state,
     gates: state.gates.map((g) => {
-      if (g.id !== id) return g;
-      if (g.status === "reserve") {
+      // Allow matching by id or name to be flexible for the AI
+      if (g.id !== id && g.name !== id && !g.name.toLowerCase().includes(id.toLowerCase())) return g;
+      
+      const newStatus = targetStatus ? (targetStatus.toLowerCase() as Gate["status"]) :
+        g.status === "reserve" ? "open" :
+        g.status === "closed" ? "open" : "reserve";
+
+      if (newStatus === "open") {
         return { ...g, status: "open", throughputPerMin: Math.round(g.capacityPerMin * 0.6) };
       }
-      if (g.status === "closed") return { ...g, status: "open" };
-      return { ...g, status: "reserve", queueLength: 0, waitTimeMin: 0, throughputPerMin: 0 };
+      if (newStatus === "closed") {
+        return { ...g, status: "closed", queueLength: 0, waitTimeMin: 0, throughputPerMin: 0 };
+      }
+      if (newStatus === "reserve") {
+        return { ...g, status: "reserve", queueLength: 0, waitTimeMin: 0, throughputPerMin: 0 };
+      }
+      // fallback
+      return { ...g, status: newStatus };
     }),
   };
 }

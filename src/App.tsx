@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Activity, LayoutDashboard, MessageSquareText, Settings2, ShieldAlert, Sparkles } from "lucide-react";
 import { Sidebar, type NavItem } from "./components/Sidebar";
 import { DashboardView } from "./components/DashboardView";
@@ -8,25 +8,36 @@ import { AssistantView } from "./components/AssistantView";
 import { SettingsView } from "./components/SettingsView";
 import { useStadiumContext } from "./hooks/useStadiumContext";
 import { getStoredApiKey, storeApiKey } from "./lib/geminiClient";
-import type { ChatMessage } from "./types";
+
 import { Badge } from "./components/ui/Badge";
 
-type TabId = "dashboard" | "gates" | "incidents" | "assistant" | "settings";
+type TabId = "dashboard" | "gates" | "incidents" | "settings";
 
 export default function App() {
   const { state, recommendations, live, actions } = useStadiumContext();
   const [tab, setTab] = useState<TabId>("dashboard");
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
     setApiKey(getStoredApiKey());
   }, []);
 
-  const handleSaveApiKey = (key: string) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        setIsCopilotOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleSaveApiKey = useCallback((key: string) => {
     storeApiKey(key);
     setApiKey(key.trim());
-  };
+  }, []);
 
   const openIncidentCount = state.incidents.filter((i) => !i.resolved).length;
   const criticalCount = recommendations.filter((r) => r.priority === "critical").length;
@@ -35,7 +46,6 @@ export default function App() {
     { id: "dashboard", label: "Command Center", icon: LayoutDashboard },
     { id: "gates", label: "Gates & Staffing", icon: Activity },
     { id: "incidents", label: "Incidents", icon: ShieldAlert, badge: openIncidentCount },
-    { id: "assistant", label: "AI Assistant", icon: MessageSquareText },
     { id: "settings", label: "Control Room", icon: Settings2 },
   ];
 
@@ -55,7 +65,15 @@ export default function App() {
           </div>
           <span className="font-semibold">ArenaIQ</span>
         </div>
-        <Badge tone={live ? "success" : "neutral"}>{live ? "LIVE" : "PAUSED"}</Badge>
+        <div className="flex items-center gap-3">
+          <Badge tone={live ? "success" : "neutral"}>{live ? "LIVE" : "PAUSED"}</Badge>
+          <button 
+            onClick={() => setIsCopilotOpen(!isCopilotOpen)} 
+            className="rounded-lg bg-slate-800 p-1.5 text-slate-300 hover:bg-slate-700 hover:text-white"
+          >
+            <MessageSquareText size={18} />
+          </button>
+        </div>
       </header>
 
       <Sidebar items={navItems} active={tab} onSelect={(id) => setTab(id as TabId)} />
@@ -79,40 +97,45 @@ export default function App() {
               </Badge>
             )}
             <Badge tone={live ? "success" : "neutral"}>{live ? "● LIVE FEED" : "PAUSED"}</Badge>
+            <button
+              onClick={() => setIsCopilotOpen(!isCopilotOpen)}
+              title="Toggle Copilot (Cmd/Ctrl + /)"
+              className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+            >
+              <MessageSquareText size={16} />
+              Copilot
+            </button>
           </div>
         </header>
 
-        <main id="main-content" className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <div className="mx-auto max-w-6xl">
-            {tab === "dashboard" && <DashboardView state={state} recommendations={recommendations} />}
-            {tab === "gates" && <GatesView state={state} onToggleGate={actions.toggleGate} />}
-            {tab === "incidents" && (
-              <IncidentsView state={state} onResolve={actions.resolveIncident} />
-            )}
-            {tab === "assistant" && (
+        <div className="flex flex-1 overflow-hidden">
+          <main id="main-content" className="flex-1 overflow-y-auto p-4 lg:p-6">
+            <div className="mx-auto max-w-6xl">
+              {tab === "dashboard" && <DashboardView state={state} recommendations={recommendations} />}
+              {tab === "gates" && <GatesView state={state} onToggleGate={actions.toggleGate} />}
+              {tab === "incidents" && (
+                <IncidentsView state={state} onResolve={actions.resolveIncident} />
+              )}
+              {tab === "settings" && (
+                <SettingsView
+                  apiKey={apiKey}
+                  onSaveApiKey={handleSaveApiKey}
+                  live={live}
+                  actions={actions}
+                />
+              )}
+            </div>
+          </main>
+
+            <aside className={`w-96 flex-shrink-0 border-l border-slate-800 bg-slate-950 flex flex-col transition-all duration-300 ${isCopilotOpen ? "translate-x-0" : "hidden translate-x-full"}`}>
               <AssistantView
                 state={state}
                 recommendations={recommendations}
+                actions={actions}
                 apiKey={apiKey}
-                messages={messages}
-                setMessages={setMessages}
               />
-            )}
-            {tab === "settings" && (
-              <SettingsView
-                apiKey={apiKey}
-                onSaveApiKey={handleSaveApiKey}
-                live={live}
-                onToggleLive={actions.toggleLive}
-                onSimulateRain={actions.simulateRain}
-                onSimulateHeat={actions.simulateHeat}
-                onClearWeather={actions.clearWeather}
-                onSimulateGateSurge={actions.simulateGateSurge}
-                onSimulateCriticalIncident={actions.simulateCriticalIncident}
-              />
-            )}
-          </div>
-        </main>
+            </aside>
+        </div>
 
         <footer className="border-t border-slate-800 px-6 py-3 text-center text-xs text-slate-600">
           ArenaIQ · Built for the Smart Stadiums &amp; Tournament Operations challenge · Simulated demo data

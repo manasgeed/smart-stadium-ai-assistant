@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { StadiumState } from "../types";
 import {
   advanceSimulation,
@@ -12,24 +12,34 @@ import {
   toggleGate,
 } from "../lib/simulation";
 import { generateRecommendations } from "../lib/decisionEngine";
+import { executeCommand } from "../lib/commandExecutor";
 
 const TICK_MS = 4000;
 
 export function useStadiumContext() {
   const [state, setState] = useState<StadiumState>(() => createInitialState());
   const [live, setLive] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!live) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-    intervalRef.current = setInterval(() => {
-      setState((prev) => advanceSimulation(prev));
+    if (!live) return;
+    
+    // Pause simulation if tab is not visible to save CPU/battery
+    let active = !document.hidden;
+    
+    const handleVisibility = () => {
+      active = !document.hidden;
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    const interval = setInterval(() => {
+      if (active) {
+        setState((prev) => advanceSimulation(prev));
+      }
     }, TICK_MS);
+
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [live]);
 
@@ -38,8 +48,17 @@ export function useStadiumContext() {
   const actions = useMemo(
     () => ({
       toggleLive: () => setLive((v) => !v),
+      dispatchCommand: (name: string, args: Record<string, any>, currentState: StadiumState) => {
+        try {
+          const newState = executeCommand(name, args, currentState);
+          setState(newState);
+          return { success: true };
+        } catch (e: any) {
+          return { success: false, error: e.message || "Unknown error during execution" };
+        }
+      },
       resolveIncident: (id: string) => setState((prev) => resolveIncident(prev, id)),
-      toggleGate: (id: string) => setState((prev) => toggleGate(prev, id)),
+      toggleGate: (id: string, targetStatus?: string) => setState((prev) => toggleGate(prev, id, targetStatus)),
       simulateRain: () => setState((prev) => injectHeavyRain(prev)),
       simulateHeat: () => setState((prev) => injectHeatAdvisory(prev)),
       clearWeather: () => setState((prev) => injectClearWeather(prev)),

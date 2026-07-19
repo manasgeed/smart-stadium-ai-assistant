@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { DoorClosed, DoorOpen, Users } from "lucide-react";
 import type { Gate, StadiumState, StaffUnit } from "../types";
 import { Card, CardHeader } from "./ui/Card";
@@ -17,7 +18,7 @@ function gateBadgeTone(status: Gate["status"]) {
   }
 }
 
-export function GatesView({
+export const GatesView = memo(function GatesView({
   state,
   onToggleGate,
 }: {
@@ -113,4 +114,4 @@ export function GatesView({
       </Card>
     </div>
   );
-}
+});

@@ -54,10 +54,12 @@ const recommendations: Recommendation[] = [
     id: "1",
     category: "crowd-flow",
     priority: "urgent",
-    title: "Open Gate 2",
-    rationale: "Crowd increasing",
-    action: "Deploy more staff",
+    title: "High queue wait time",
+    rationale: "Queue at Gate A is too long.",
+    action: "Open reserve gate",
     createdAt: Date.now(),
+    confidenceScore: 0.95,
+    predictedImpact: "Reduces queue time by 30%",
   },
 ];
 
@@ -72,6 +74,6 @@ describe("DashboardView", () => {
 
     expect(screen.getByText("Attendance")).toBeInTheDocument();
     expect(screen.getByText("50,000")).toBeInTheDocument();
-    expect(screen.getByText("Open Gate 2")).toBeInTheDocument();
+    expect(screen.getByText("High queue wait time")).toBeInTheDocument();
   });
 });

@@ -27,6 +27,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
         ? `Open ${alt.name} immediately and redirect arriving fans via signage/staff to balance load.`
         : `Add 2 extra stewards to ${gate.name} and open a fast-lane for digital ticket holders.`,
       relatedZone: gate.zone,
+      confidenceScore: gate.waitTimeMin >= 15 ? 98 : 88,
+      predictedImpact: alt ? `Reduces wait time at ${gate.name} by ~40% within 10 mins.` : `Increases throughput by 15 scans/min.`,
     });
   }
 
@@ -40,6 +42,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
         rationale: `Occupancy of ${zone.occupancy}/${zone.capacity} exceeds the 95% critical safety threshold, raising crowd-crush risk.`,
         action: `Pause further entry to ${zone.name}, open overflow area, and dispatch stewards to manage egress flow.`,
         relatedZone: zone.name,
+        confidenceScore: 99,
+        predictedImpact: "Prevents crowd crush and stabilizes density to < 90% in 5 mins.",
       });
     } else if (zone.densityPct >= 85) {
       push({
@@ -49,6 +53,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
         rationale: `Density has crossed the 85% advisory threshold. Historical patterns show bottlenecks form within 10-15 minutes past this point.`,
         action: `Slow inflow to ${zone.name} and monitor concourse cameras; prep overflow signage.`,
         relatedZone: zone.name,
+        confidenceScore: 85,
+        predictedImpact: "Mitigates bottleneck formation and redirects 20% of traffic to adjacent zones.",
       });
     }
     if (zone.noiseLevelDb >= 100) {
@@ -59,6 +65,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
         rationale: `Noise measured at ${zone.noiseLevelDb} dB, above the 100 dB sustained-exposure guideline.`,
         action: `Remind stewards stationed in ${zone.name} to use hearing protection and monitor for crowd agitation.`,
         relatedZone: zone.name,
+        confidenceScore: 92,
+        predictedImpact: "Ensures staff occupational safety compliance.",
       });
     }
   }
@@ -72,6 +80,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
       title: "Severe weather - storm conditions detected",
       rationale: `Wind speed at ${weather.windKph} km/h with storm activity. Open-air concourses and queues are at risk.`,
       action: "Activate weather protocol: move queues under cover, pause outdoor concessions, brief PA announcement on shelter points.",
+      confidenceScore: 95,
+      predictedImpact: "Minimizes lightning/debris injury risk for 10,000+ exposed fans.",
     });
   } else if (weather.condition === "rain") {
     push({
@@ -80,6 +90,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
       title: "Rain detected around the venue",
       rationale: "Wet walkways increase slip risk near uncovered concourses and stairwells.",
       action: "Deploy non-slip mats near entrances and alert cleaning crews to monitor water pooling.",
+      confidenceScore: 82,
+      predictedImpact: "Reduces slip-and-fall incidents by 80% during egress.",
     });
   } else if (weather.condition === "heat-advisory") {
     push({
@@ -88,6 +100,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
       title: `Heat advisory - ${weather.temperatureC}°C ambient`,
       rationale: "Sustained high temperature raises dehydration and heat-exhaustion risk, especially in Upper Tier sun-exposed sections.",
       action: "Open additional hydration stations, increase medical staff visibility, and push a hydration reminder over the PA system.",
+      confidenceScore: 89,
+      predictedImpact: "Proactively reduces heat-related medical dispatches by ~50%.",
     });
   }
 
@@ -107,6 +121,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
           ? `Dispatch ${medicalNearby.name} (${medicalNearby.role}, currently available) to ${incident.zone} immediately.`
           : `All medical units are deployed - request nearest available first-responder to ${incident.zone} and alert control room.`,
         relatedZone: incident.zone,
+        confidenceScore: 99,
+        predictedImpact: `Reduces incident resolution time to under 3 minutes.`,
       });
     }
   }
@@ -128,6 +144,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
       rationale: `${candidate.name} (${candidate.role}) is available in a lower-density area while ${target} is under pressure.`,
       action: `Reassign ${candidate.name} to ${target} to reinforce crowd management.`,
       relatedZone: target,
+      confidenceScore: 78,
+      predictedImpact: `Improves response coverage in ${target} without leaving origin zone vulnerable.`,
     });
   }
 
@@ -141,6 +159,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
         rationale: `Demand level "${c.demandLevel}" combined with low remaining stock risks a stockout during peak match moments.`,
         action: `Trigger restock run to ${c.name} from central warehouse before next intermission.`,
         relatedZone: c.zone,
+        confidenceScore: c.stockPct <= 10 ? 94 : 75,
+        predictedImpact: "Prevents revenue loss and localized crowd congestion from closed queues.",
       });
     }
   }
@@ -153,6 +173,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
       title: "Half-time surge expected",
       rationale: "Historical concourse data shows a 3-4x spike in concession and restroom traffic within the first 5 minutes of half-time.",
       action: "Pre-position extra stewards at concourse chokepoints and open all concession registers.",
+      confidenceScore: 91,
+      predictedImpact: "Maintains concourse flow and minimizes waiting delays during the 15-minute window.",
     });
   }
 
@@ -166,6 +188,8 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
       title: "Venue near sell-out capacity",
       rationale: `Attendance at ${attendancePct}% of capacity. Egress planning should begin ahead of full-time to avoid exit bottlenecks.`,
       action: "Stagger exit gate openings post-match and coordinate with transit/parking teams in advance.",
+      confidenceScore: 96,
+      predictedImpact: "Ensures safe egress, preventing station overcrowding post-match.",
     });
   }
 
@@ -180,22 +204,28 @@ export function generateRecommendations(state: StadiumState): Recommendation[] {
 }
 
 export function summarizeContextForPrompt(state: StadiumState, recs: Recommendation[]): string {
-  const gatesSummary = state.gates
-    .map((g) => `${g.name}: ${g.status}, queue ${g.queueLength}, wait ${g.waitTimeMin}min`)
-    .join("; ");
-  const zonesSummary = state.zones
-    .map((z) => `${z.name}: ${z.densityPct}% density`)
-    .join("; ");
+  const congestedGates = state.gates.filter((g) => g.status === "congested" || g.waitTimeMin > 5);
+  const gatesSummary = congestedGates.length > 0
+    ? congestedGates.map((g) => `${g.name}: ${g.status}, queue ${g.queueLength}, wait ${g.waitTimeMin}min`).join("; ")
+    : "All gates operating normally.";
+
+  const denseZones = state.zones.filter((z) => z.densityPct >= 80);
+  const zonesSummary = denseZones.length > 0
+    ? denseZones.map((z) => `${z.name}: ${z.densityPct}% density`).join("; ")
+    : "All zones within safe density levels.";
+
   const incidentsSummary = state.incidents
     .filter((i) => !i.resolved)
     .map((i) => `[${i.severity}] ${i.type} in ${i.zone}: ${i.description}`)
-    .join(" | ") || "None open";
-  const staffSummary = state.staff
-    .map((s) => `${s.name} (${s.role}) - ${s.status} @ ${s.zone}`)
-    .join("; ");
-  const concessionsSummary = state.concessions
-    .map((c) => `${c.name}: ${c.stockPct}% stock, demand ${c.demandLevel}`)
-    .join("; ");
+    .join(" | ") || "No open incidents.";
+
+  const lowStock = state.concessions.filter((c) => c.stockPct <= 30);
+  const concessionsSummary = lowStock.length > 0
+    ? lowStock.map((c) => `${c.name}: ${c.stockPct}% stock`).join("; ")
+    : "All concessions adequately stocked.";
+
+  const availableStaff = state.staff.filter((s) => s.status === "available").length;
+
   const recsSummary = recs
     .map((r) => `- [${r.priority.toUpperCase()}] ${r.title} -> ${r.action}`)
     .join("\n") || "No active recommendations.";
@@ -205,8 +235,9 @@ WEATHER: ${state.weather.condition}, ${state.weather.temperatureC}°C, wind ${st
 GATES: ${gatesSummary}
 ZONES: ${zonesSummary}
 OPEN INCIDENTS: ${incidentsSummary}
-STAFF: ${staffSummary}
+AVAILABLE STAFF: ${availableStaff} units ready for deployment.
 CONCESSIONS: ${concessionsSummary}
 CURRENT AI-GENERATED RECOMMENDATIONS (rule engine):
-${recsSummary}`;
+${recsSummary}
+LAST PA ANNOUNCEMENT: ${state.lastAnnouncement || "None"}`;
 }

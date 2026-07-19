@@ -105,6 +105,8 @@ export interface Recommendation {
   action: string;
   relatedZone?: string;
   createdAt: number;
+  confidenceScore: number;
+  predictedImpact: string;
 }
 
 export interface ChatMessage {
@@ -113,6 +115,14 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   source?: "gemini" | "offline";
+  command?: CommandPayload;
+  commandStatus?: "pending" | "success" | "error";
+  commandError?: string;
+}
+
+export interface CommandPayload {
+  name: string;
+  args: Record<string, any>;
 }
 
 export interface StadiumState {
@@ -124,4 +134,17 @@ export interface StadiumState {
   staff: StaffUnit[];
   concessions: Concession[];
   tick: number;
+  lastAnnouncement?: string;
+}
+
+export interface AppActions {
+  toggleLive: () => void;
+  dispatchCommand: (name: string, args: Record<string, any>, currentState: StadiumState) => { success: boolean; error?: string };
+  resolveIncident: (id: string) => void;
+  toggleGate: (id: string, targetStatus?: string) => void;
+  simulateRain: () => void;
+  simulateHeat: () => void;
+  clearWeather: () => void;
+  simulateGateSurge: () => void;
+  simulateCriticalIncident: () => void;
 }

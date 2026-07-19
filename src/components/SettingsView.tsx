@@ -2,27 +2,18 @@ import { useState } from "react";
 import { CloudLightning, KeyRound, PlayCircle, PauseCircle, Siren, Sun, Users2 } from "lucide-react";
 import { Card, CardHeader } from "./ui/Card";
 import { Badge } from "./ui/Badge";
+import type { AppActions } from "../types";
 
 export function SettingsView({
   apiKey,
   onSaveApiKey,
   live,
-  onToggleLive,
-  onSimulateRain,
-  onSimulateHeat,
-  onClearWeather,
-  onSimulateGateSurge,
-  onSimulateCriticalIncident,
+  actions,
 }: {
   apiKey: string;
   onSaveApiKey: (key: string) => void;
   live: boolean;
-  onToggleLive: () => void;
-  onSimulateRain: () => void;
-  onSimulateHeat: () => void;
-  onClearWeather: () => void;
-  onSimulateGateSurge: () => void;
-  onSimulateCriticalIncident: () => void;
+  actions: AppActions;
 }) {
   const [draft, setDraft] = useState(apiKey);
   const [saved, setSaved] = useState(false);
@@ -91,7 +82,7 @@ export function SettingsView({
           icon={live ? <PlayCircle size={16} /> : <PauseCircle size={16} />}
           action={
             <button
-              onClick={onToggleLive}
+              onClick={actions.toggleLive}
               className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
             >
               {live ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
@@ -112,11 +103,11 @@ export function SettingsView({
           icon={<Siren size={16} />}
         />
         <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
-          <ScenarioButton icon={<CloudLightning size={16} />} label="Trigger storm" onClick={onSimulateRain} />
-          <ScenarioButton icon={<Sun size={16} />} label="Trigger heat advisory" onClick={onSimulateHeat} />
-          <ScenarioButton icon={<Sun size={16} />} label="Clear weather" onClick={onClearWeather} />
-          <ScenarioButton icon={<Users2 size={16} />} label="Simulate gate surge" onClick={onSimulateGateSurge} />
-          <ScenarioButton icon={<Siren size={16} />} label="Simulate critical incident" onClick={onSimulateCriticalIncident} />
+          <ScenarioButton icon={<CloudLightning size={16} />} label="Trigger storm" onClick={actions.simulateRain} />
+          <ScenarioButton icon={<Sun size={16} />} label="Trigger heat advisory" onClick={actions.simulateHeat} />
+          <ScenarioButton icon={<Sun size={16} />} label="Clear weather" onClick={actions.clearWeather} />
+          <ScenarioButton icon={<Users2 size={16} />} label="Simulate gate surge" onClick={actions.simulateGateSurge} />
+          <ScenarioButton icon={<Siren size={16} />} label="Simulate critical incident" onClick={actions.simulateCriticalIncident} />
         </div>
       </Card>
     </div>

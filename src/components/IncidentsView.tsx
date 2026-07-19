@@ -1,10 +1,11 @@
+import { memo } from "react";
 import { CheckCircle2, Coffee, ShieldAlert } from "lucide-react";
 import type { StadiumState } from "../types";
 import { Card, CardHeader } from "./ui/Card";
 import { Badge, severityTone } from "./ui/Badge";
 import { ProgressBar } from "./ui/ProgressBar";
 
-export function IncidentsView({
+export const IncidentsView = memo(function IncidentsView({
   state,
   onResolve,
 }: {
@@ -86,4 +87,4 @@ export function IncidentsView({
       )}
     </div>
   );
-}
+});
